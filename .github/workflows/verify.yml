@@ -17,7 +17,16 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: pip install -r backend/requirements.lock
-      - run: python scripts/verify-built.py
+      - name: Verify production HTTP behavior
+        id: smoke
+        run: python scripts/verify-built.py
+      - name: Upload production startup log on failure
+        if: failure() && steps.smoke.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-startup-log
+          path: docs/evidence/production-server.txt
+          if-no-files-found: ignore
   integration:
     runs-on: ubuntu-latest
     steps:
