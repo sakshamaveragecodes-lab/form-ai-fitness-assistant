@@ -79,7 +79,11 @@ def main():
             finally:
                 stop_server(server)
     except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
-        tail = logfile.read_text(errors="replace")[-4000:] if logfile.exists() else ""
+        output = logfile.read_text(errors="replace") if logfile.exists() else ""
+        # Wrangler's module table can bury the useful error and exceed GitHub's
+        # annotation length limit. The artifact still retains the complete log.
+        lines = [line for line in output.splitlines() if not line.lstrip().startswith(("│", "├", "└", "┌", "─"))]
+        tail = "\n".join(lines[-15:])[-1200:]
         message = f"{error}\nProduction server log: {logfile}\n{tail}"
         print(message, file=sys.stderr, flush=True)
         if os.getenv("GITHUB_ACTIONS") == "true":

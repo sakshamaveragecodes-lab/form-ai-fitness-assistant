@@ -15,6 +15,12 @@ def check(name, condition):
     assert condition, name
     checks.append(name)
     print('PASS: ' + name, flush=True)
+def require_success(response):
+    if response.is_error:
+        # Infrastructure failures often use a plain-text response instead of the
+        # application's JSON errors. Include that diagnostic, never success data.
+        raise RuntimeError(f'{response.request.url.path}: HTTP {response.status_code}: {response.text[:1200]}')
+    return response
 try:
     with httpx.Client(base_url=base, timeout=20, trust_env=False) as anonymous:
         check('database-connected health endpoint', anonymous.get('/api/health').json()['database'] == 'connected')
@@ -23,14 +29,14 @@ try:
     for is_admin in [False, True]:
         client = httpx.Client(base_url=base, headers=headers, timeout=20, trust_env=False)
         response = client.post('/api/auth/demo', json={'admin': is_admin})
-        response.raise_for_status()
+        require_success(response)
         clients.append(client)
         check('demo admin creation' if is_admin else 'demo user creation', response.json()['user']['role'] == ('admin' if is_admin else 'user'))
     user, admin = clients
     check('user cannot access admin API', user.get('/api/admin/overview').status_code == 403)
     check('admin can access admin API', admin.get('/api/admin/overview').status_code == 200)
     response = user.post('/api/devices', json={'name': 'HTTP verification device', 'exercise': 'curl', 'mode': 'hardware'})
-    response.raise_for_status()
+    require_success(response)
     device = response.json()
     with tempfile.TemporaryDirectory(prefix='form-verification-') as temporary:
         env = {**os.environ, 'FORM_BASE_URL': base, 'FORM_DEVICE_ID': device['id'], 'FORM_DEVICE_TOKEN': device['deviceToken'], 'NO_PROXY': '127.0.0.1,localhost'}
