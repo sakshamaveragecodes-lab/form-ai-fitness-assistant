@@ -1,9 +1,11 @@
 """Verify a built app with isolated local state and actionable failure output."""
 import os
 from pathlib import Path
+import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 
 import httpx
@@ -29,15 +31,19 @@ def main():
     root = Path(__file__).resolve().parents[1]
     evidence = root / "docs" / "evidence"
     evidence.mkdir(parents=True, exist_ok=True)
-    logfile = evidence / "production-server.txt"
-    config = root / ".sites-runtime" / "verification-config"
+    # Keep all writes outside Wrangler's watched checkout. In CI, a log or
+    # runtime-state update can otherwise restart the Worker during a POST.
+    runtime = Path(tempfile.mkdtemp(prefix="form-built-verification-"))
+    logfile = runtime / "production-server.txt"
+    config = runtime / "config"
     config.mkdir(parents=True, exist_ok=True)
     env = {
         **os.environ,
         "PORT": "4183",
-        "FORM_STATE_DIR": ".wrangler/http-verification",
+        "FORM_STATE_DIR": str(runtime / "state"),
         "FORM_BASE_URL": "http://127.0.0.1:4183",
         "XDG_CONFIG_HOME": str(config),
+        "SITES_RUNTIME_ROOT": str(runtime / "tools"),
     }
     try:
         with logfile.open("w") as log:
@@ -90,6 +96,11 @@ def main():
             annotation = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
             print(f"::error title=Production smoke verification::{annotation}", flush=True)
         return 1
+    finally:
+        # Retain CI diagnostics only after the development server has stopped.
+        if logfile.exists():
+            shutil.copyfile(logfile, evidence / "production-server.txt")
+        shutil.rmtree(runtime)
     return 0
 
 
