@@ -1,0 +1,9 @@
+node_modules
+dist
+public/models
+pnpm-lock.yaml
+.venv
+.wrangler
+.sites-runtime
+build
+components/ui

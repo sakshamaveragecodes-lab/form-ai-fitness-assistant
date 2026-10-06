@@ -1,0 +1,5 @@
+{
+  "credential_shaped_literals_in_application_source": [],
+  "runtime_credentials_excluded_by_packager": true,
+  "note": "Focused source review; not a formal penetration test."
+}

@@ -1,0 +1,12 @@
+PASS: database-connected health endpoint
+PASS: anonymous access denied
+PASS: CSRF action header enforced
+PASS: demo user creation
+PASS: demo admin creation
+PASS: user cannot access admin API
+PASS: admin can access admin API
+PASS: real HTTP simulator process exits successfully
+PASS: two simulator readings persist with honest source labels
+PASS: cross-workspace deletion denied
+PASS: tenant snapshots isolated
+11 HTTP checks passed; verification workspaces removed.

@@ -1,0 +1,21 @@
+$ vitest run
+
+ RUN  v3.2.4 /workspace/sites/ai-gym-fitness-assistant
+
+ ✓ tests/calculations.test.ts (33 tests) 214ms
+ ✓ tests/recommendations.test.ts (12 tests) 11ms
+ ✓ tests/api.test.ts (21 tests) 4352ms
+   ✓ Migrations, accounts and sessions > resets with a one-use recovery key and revokes all sessions  310ms
+   ✓ Migrations, accounts and sessions > requires the current password for password changes  516ms
+   ✓ Migrations, accounts and sessions > throttles credential attacks and permits disabling public demos  851ms
+   ✓ Application workflows and ownership > exports personal data without credential material and cascades confirmed deletion  364ms
+ ✓ tests/components.test.tsx (6 tests) 2006ms
+   ✓ Accessible forms and critical interactions > saves onboarding inputs and advances only after success  871ms
+   ✓ Accessible forms and critical interactions > keeps failed onboarding on the same screen  301ms
+   ✓ Accessible forms and critical interactions > records the actual sets, reps and duration from a manual workout  526ms
+
+ Test Files  4 passed (4)
+      Tests  72 passed (72)
+   Start at  11:21:06
+   Duration  8.44s (transform 1.38s, setup 0ms, collect 3.17s, tests 6.58s, environment 1.10s, prepare 739ms)
+

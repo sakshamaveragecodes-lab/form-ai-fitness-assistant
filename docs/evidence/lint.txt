@@ -1,0 +1,1 @@
+$ eslint app components/fitness components/fitness-app.tsx lib db tests

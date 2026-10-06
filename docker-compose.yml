@@ -1,0 +1,48 @@
+services:
+  app:
+    build: .
+    ports: ["127.0.0.1:4173:4173"]
+    volumes: ["form-data:/app/.wrangler"]
+    environment:
+      DEMO_MODE: ${DEMO_MODE:-true}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4.1-mini}
+    restart: unless-stopped
+  integration:
+    profiles: ["integration"]
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports: ["127.0.0.1:8000:8000"]
+    environment:
+      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-}
+      FORM_BASE_URL: http://app:4173
+    depends_on:
+      app: {condition: service_healthy}
+  mqtt:
+    profiles: ["iot"]
+    image: eclipse-mosquitto:2.0
+    ports: ["127.0.0.1:1883:1883"]
+    volumes:
+      - ./docker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mqtt-data:/mosquitto/data
+  bridge:
+    profiles: ["iot"]
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["python", "-m", "iot.bridge"]
+    environment:
+      FORM_BASE_URL: http://app:4173
+      FORM_DEVICE_TOKENS_JSON: ${FORM_DEVICE_TOKENS_JSON:-{}}
+      MQTT_HOST: mqtt
+      MQTT_QUEUE_FILE: /data/mqtt-queue.sqlite3
+    volumes: ["bridge-data:/data"]
+    depends_on:
+      app: {condition: service_healthy}
+      mqtt: {condition: service_started}
+volumes:
+  form-data:
+  mqtt-data:
+  bridge-data:
