@@ -31,8 +31,7 @@ def main():
     root = Path(__file__).resolve().parents[1]
     evidence = root / "docs" / "evidence"
     evidence.mkdir(parents=True, exist_ok=True)
-    # Keep all writes outside Wrangler's watched checkout. In CI, a log or
-    # runtime-state update can otherwise restart the Worker during a POST.
+    # Keep verification writes separate from application source/asset watchers.
     runtime = Path(tempfile.mkdtemp(prefix="form-built-verification-"))
     logfile = runtime / "production-server.txt"
     config = runtime / "config"
@@ -57,20 +56,31 @@ def main():
             )
             try:
                 ready = False
+                healthy_since = None
+                deadline = time.monotonic() + 45
                 with httpx.Client(trust_env=False, timeout=2) as client:
-                    for _ in range(180):
+                    while time.monotonic() < deadline:
                         status = server.poll()
                         if status is not None:
                             raise RuntimeError(f"Production server exited with code {status}.")
                         try:
-                            ready = client.get(env["FORM_BASE_URL"] + "/api/health").status_code == 200
-                            if ready:
+                            healthy = client.get(env["FORM_BASE_URL"] + "/api/health").status_code == 200
+                            if healthy:
+                                healthy_since = healthy_since or time.monotonic()
+                            else:
+                                healthy_since = None
+                            # Wrangler can finish startup with a Worker reload
+                            # after the first health response. GETs are safe to
+                            # probe; never retry the non-idempotent smoke POSTs.
+                            if healthy_since is not None and time.monotonic() - healthy_since >= 2:
+                                ready = True
                                 break
                         except httpx.HTTPError:
-                            pass
+                            healthy_since = None
                         time.sleep(.25)
                 if not ready:
-                    raise RuntimeError("Production server did not become healthy.")
+                    raise RuntimeError("Production server did not become stably healthy.")
+                print("Production server passed the stable startup health check.", flush=True)
                 smoke = subprocess.run(
                     [sys.executable, "scripts/smoke-http.py"],
                     cwd=root,
